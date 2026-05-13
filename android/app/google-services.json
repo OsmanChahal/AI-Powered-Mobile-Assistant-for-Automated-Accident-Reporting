@@ -1,0 +1,54 @@
+{
+  "project_info": {
+    "project_number": "735393866253",
+    "project_id": "accidentrepoter",
+    "storage_bucket": "accidentrepoter.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:735393866253:android:2a17b0d7297c89944eab44",
+        "android_client_info": {
+          "package_name": "com.example.accident_reporter"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "735393866253-cm1kvrgu1pdp3act7suaclu8963l1r9e.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.accident_reporter",
+            "certificate_hash": "7b3f2dac9df30bb78bf6f3c7582b93b7dccb086d"
+          }
+        },
+        {
+          "client_id": "735393866253-pb98rva3rvcoe5u0je7rpngnqdlsgedq.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAAUk0-lq9Sb1793mQY-exq5_G6N2MYiQU"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "735393866253-pb98rva3rvcoe5u0je7rpngnqdlsgedq.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "735393866253-onkg7i2id2um6n1ijbl0nbsipg2og1of.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
