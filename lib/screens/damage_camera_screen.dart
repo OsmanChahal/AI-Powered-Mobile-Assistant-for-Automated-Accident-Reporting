@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import '../theme/app_theme.dart';
@@ -67,6 +68,11 @@ class _DamageCameraScreenState extends State<DamageCameraScreen> {
           }
         }
         widget.state.setDamages(damages);
+
+        // Store the YOLO-annotated image (with bounding boxes) in state
+        if (report['annotated_image_bytes'] is Uint8List) {
+          widget.state.setAnnotatedImage(report['annotated_image_bytes']);
+        }
 
         if (mounted) Navigator.pushNamed(context, '/ai-processing');
       } else {

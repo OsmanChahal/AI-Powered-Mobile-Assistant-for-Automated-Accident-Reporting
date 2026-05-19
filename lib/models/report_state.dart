@@ -1,3 +1,4 @@
+import 'dart:typed_data';
 import 'package:flutter/foundation.dart';
 
 class DamageResult {
@@ -17,6 +18,11 @@ class DamageResult {
 class VehicleReport {
   String plateNumber;
   List<DamageResult> damages;
+
+  /// Raw bytes of the YOLO-annotated image (bounding boxes drawn).
+  /// Populated after the AI analysis completes; uploaded to Firebase Storage
+  /// when the user submits the claim.
+  Uint8List? annotatedImageBytes;
 
   VehicleReport({this.plateNumber = '', List<DamageResult>? damages})
       : damages = damages ?? [];
@@ -40,11 +46,18 @@ class ReportState extends ChangeNotifier {
   int totalVehicles = 2;
   int currentVehicleIndex = 0;
   List<VehicleReport> vehicles = [];
+  List<String> accidentImages = [];
 
   void startNewReport() {
     totalVehicles = 2;
     currentVehicleIndex = 0;
     vehicles = List.generate(2, (_) => VehicleReport());
+    accidentImages.clear();
+    notifyListeners();
+  }
+
+  void addImage(String imageUrl) {
+    accidentImages.add(imageUrl);
     notifyListeners();
   }
 
@@ -62,6 +75,14 @@ class ReportState extends ChangeNotifier {
     }
   }
 
+  /// Store the YOLO-annotated image bytes for the current vehicle.
+  void setAnnotatedImage(Uint8List imageBytes) {
+    if (currentVehicleIndex < vehicles.length) {
+      vehicles[currentVehicleIndex].annotatedImageBytes = imageBytes;
+      notifyListeners();
+    }
+  }
+
   bool get hasMoreVehicles => currentVehicleIndex < totalVehicles - 1;
 
   void nextVehicle() {
@@ -71,6 +92,7 @@ class ReportState extends ChangeNotifier {
     }
   }
 
-  VehicleReport? get currentVehicle =>
-      currentVehicleIndex < vehicles.length ? vehicles[currentVehicleIndex] : null;
+  VehicleReport? get currentVehicle => currentVehicleIndex < vehicles.length
+      ? vehicles[currentVehicleIndex]
+      : null;
 }

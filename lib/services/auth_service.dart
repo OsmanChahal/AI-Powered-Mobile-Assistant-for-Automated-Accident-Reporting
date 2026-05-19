@@ -42,15 +42,9 @@ class AuthService {
 
       // Sign in to Firebase with the Google credential
       final UserCredential userCredential = await _auth.signInWithCredential(credential);
-    
-      if (userCredential.additionalUserInfo?.isNewUser ?? false) {
-        await _db.collection('users').doc(userCredential.user!.uid).set({
-          'uid': userCredential.user!.uid,
-          'email': userCredential.user!.email,
-          'first_name': userCredential.user!.displayName?.split(' ').first ?? '',
-          'last_name': userCredential.user!.displayName?.split(' ').skip(1).join(' ') ?? '',
-        });
-      }
+
+      // Don't create Firestore doc here for new users.
+      // The register screen will handle profile creation.
 
       return userCredential;
     } catch (e) {
@@ -98,6 +92,47 @@ class AuthService {
       print("Registration Error: $e");
       rethrow;
     }
+  }
+
+  // Check if the current user has a completed profile in Firestore
+  static Future<bool> hasCompletedProfile() async {
+    final user = _auth.currentUser;
+    if (user == null) return false;
+    final doc = await _db.collection('users').doc(user.uid).get();
+    // Consider profile complete if the document exists AND has required fields
+    if (!doc.exists) return false;
+    final data = doc.data();
+    return data != null &&
+        data.containsKey('phone_number') &&
+        data.containsKey('car_model') &&
+        data.containsKey('license_plate');
+  }
+
+  // Save profile data for an already-authenticated Google user
+  static Future<void> completeGoogleProfile({
+    required String firstName,
+    required String lastName,
+    required String phoneNumber,
+    required DateTime birthdate,
+    required String carModel,
+    required String licensePlate,
+    String? insuranceCompany,
+  }) async {
+    final user = _auth.currentUser;
+    if (user == null) throw Exception('No authenticated user found.');
+
+    await _db.collection('users').doc(user.uid).set({
+      'uid': user.uid,
+      'email': user.email,
+      'first_name': firstName,
+      'last_name': lastName,
+      'phone_number': phoneNumber,
+      'birthdate': Timestamp.fromDate(birthdate),
+      'car_model': carModel,
+      'license_plate': licensePlate,
+      if (insuranceCompany != null && insuranceCompany.isNotEmpty)
+        'insurance_company': insuranceCompany,
+    }, SetOptions(merge: true));
   }
 
   // 4. Sign Out

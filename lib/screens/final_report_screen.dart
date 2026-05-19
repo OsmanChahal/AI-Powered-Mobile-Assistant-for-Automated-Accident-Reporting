@@ -1,4 +1,7 @@
+import 'dart:typed_data';
+
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
 
 import '../firestore_services.dart';
@@ -10,6 +13,44 @@ class FinalReportScreen extends StatelessWidget {
   final ReportState state;
 
   const FinalReportScreen({super.key, required this.state});
+
+  /// Uploads all annotated YOLO images from state to Firebase Storage
+  /// and returns a list of download URLs.
+  Future<List<String>> _uploadAnnotatedImages() async {
+    final List<String> downloadUrls = [];
+    final storage = FirebaseStorage.instance;
+    final String uid =
+        FirebaseAuth.instance.currentUser?.uid ?? 'temp_user_001';
+    final String timestamp = DateTime.now().millisecondsSinceEpoch.toString();
+
+    for (int i = 0; i < state.vehicles.length; i++) {
+      final Uint8List? imageBytes = state.vehicles[i].annotatedImageBytes;
+      if (imageBytes == null) continue;
+
+      // Create a unique path: accident_images/<uid>/<timestamp>_vehicle_<i>.jpg
+      final String filePath =
+          'accident_images/$uid/${timestamp}_vehicle_${i + 1}.jpg';
+      final Reference ref = storage.ref().child(filePath);
+
+      try {
+        // Upload the raw JPEG bytes
+        final UploadTask uploadTask = ref.putData(
+          imageBytes,
+          SettableMetadata(contentType: 'image/jpeg'),
+        );
+        final TaskSnapshot snapshot = await uploadTask;
+
+        // Retrieve the public download URL
+        final String url = await snapshot.ref.getDownloadURL();
+        downloadUrls.add(url);
+        debugPrint('✅ Uploaded vehicle ${i + 1} image → $url');
+      } catch (e) {
+        debugPrint('❌ Failed to upload vehicle ${i + 1} image: $e');
+      }
+    }
+
+    return downloadUrls;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -80,28 +121,43 @@ class FinalReportScreen extends StatelessWidget {
                     onTap: () async {
                       ScaffoldMessenger.of(context).showSnackBar(
                         const SnackBar(
-                          content: Text('Saving report to cloud...'),
+                          content: Text('Uploading images & saving report...'),
                           backgroundColor: AppColors.blue400,
+                          duration: Duration(seconds: 10),
                         ),
                       );
 
-                      List<String> images = []; 
-                      List<String> involvedPlates = state.vehicles.map((v) => v.plateNumber.isNotEmpty ? v.plateNumber : 'Unknown').toList();
-                      
-                      List<Map<String, dynamic>> carsInvolved = state.vehicles.map((v) {
+                      // --- Task 3: Upload annotated images to Firebase Storage ---
+                      final List<String> imageUrls =
+                          await _uploadAnnotatedImages();
+
+                      List<String> involvedPlates = state.vehicles
+                          .map((v) => v.plateNumber.isNotEmpty
+                              ? v.plateNumber
+                              : 'Unknown')
+                          .toList();
+
+                      List<Map<String, dynamic>> carsInvolved =
+                          state.vehicles.map((v) {
                         return {
-                          'license_plate': v.plateNumber.isNotEmpty ? v.plateNumber : 'Unknown',
-                          'fault_percentage': 0, 
-                          'detected_parts': v.damages.map((d) => d.component).toList(),
+                          'license_plate': v.plateNumber.isNotEmpty
+                              ? v.plateNumber
+                              : 'Unknown',
+                          'fault_percentage': 0,
+                          'detected_parts':
+                              v.damages.map((d) => d.component).toList(),
                         };
                       }).toList();
 
-                      final String uid = FirebaseAuth.instance.currentUser?.uid ?? "temp_user_001";
+                      final String uid =
+                          FirebaseAuth.instance.currentUser?.uid ??
+                              "temp_user_001";
 
-                      bool success = await FirestoreService.saveAccidentReport(
+                      bool success =
+                          await FirestoreService.saveAccidentReport(
                         reporterUid: uid,
-                        accidentType: "Collision", 
-                        images: images,
+                        accidentType: "Collision",
+                        images: imageUrls,
                         involvedPlates: involvedPlates,
                         carsInvolved: carsInvolved,
                       );
@@ -111,15 +167,18 @@ class FinalReportScreen extends StatelessWidget {
                         if (success) {
                           ScaffoldMessenger.of(context).showSnackBar(
                             const SnackBar(
-                              content: Text('Claim submitted successfully'),
+                              content:
+                                  Text('Claim submitted successfully'),
                               backgroundColor: AppColors.teal400,
                             ),
                           );
-                          Navigator.pushNamedAndRemoveUntil(context, '/', (r) => false);
+                          Navigator.pushNamedAndRemoveUntil(
+                              context, '/', (r) => false);
                         } else {
                           ScaffoldMessenger.of(context).showSnackBar(
                             const SnackBar(
-                              content: Text('Failed to submit claim. Please try again.'),
+                              content: Text(
+                                  'Failed to submit claim. Please try again.'),
                               backgroundColor: Colors.redAccent,
                             ),
                           );
@@ -216,6 +275,20 @@ class _VehicleCard extends StatelessWidget {
               SeverityPill(label: '$severityLabel severity'),
             ],
           ),
+
+          // Show annotated image thumbnail if available
+          if (report.annotatedImageBytes != null) ...[
+            const SizedBox(height: 12),
+            ClipRRect(
+              borderRadius: BorderRadius.circular(10),
+              child: Image.memory(
+                report.annotatedImageBytes!,
+                width: double.infinity,
+                height: 140,
+                fit: BoxFit.cover,
+              ),
+            ),
+          ],
 
           const SizedBox(height: 12),
           const Divider(height: 1, thickness: 0.5, color: AppColors.border),

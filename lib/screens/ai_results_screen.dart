@@ -41,24 +41,26 @@ class AiResultsScreen extends StatelessWidget {
                   ),
                   const SizedBox(height: 12),
 
-                  // Annotated image area (Cleaned up fake bounding boxes)
+                  // Annotated image area — show YOLO bounding-box image
                   Container(
                     width: double.infinity,
-                    height: 180,
+                    height: 220,
                     decoration: BoxDecoration(
                       color: const Color(0xFFD0D0D0),
                       borderRadius: BorderRadius.circular(12),
                     ),
-                    child: Stack(
-                      children: [
-                        CustomPaint(
-                          painter: _CarImagePainter(),
-                          size: const Size(double.infinity, 180),
-                        ),
-                        // Removed hardcoded bounding boxes so it doesn't look broken
-                        // when real data is displayed.
-                      ],
-                    ),
+                    clipBehavior: Clip.antiAlias,
+                    child: currentVehicle.annotatedImageBytes != null
+                        ? Image.memory(
+                            currentVehicle.annotatedImageBytes!,
+                            fit: BoxFit.cover,
+                            width: double.infinity,
+                            height: 220,
+                          )
+                        : CustomPaint(
+                            painter: _CarImagePainter(),
+                            size: const Size(double.infinity, 220),
+                          ),
                   ),
                   const SizedBox(height: 16),
 

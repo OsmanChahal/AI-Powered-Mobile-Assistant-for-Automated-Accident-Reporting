@@ -2,6 +2,8 @@ from flask import Flask, request, jsonify
 from ultralytics import YOLO
 from PIL import Image, ImageOps
 import io
+import base64
+import cv2
 
 # Import your custom logic from the services folder!
 from services.fault_logic import calculate_fault
@@ -65,8 +67,24 @@ def analyze_accident():
 
     detected_parts = list(set(detected_parts))
 
+    # --- Draw bounding boxes using YOLO's built-in plot() ---
+    # results[0].plot() returns a BGR numpy array with boxes drawn
+    annotated_bgr = results[0].plot()
+
+    # Convert BGR (OpenCV) -> RGB -> JPEG bytes -> Base64 string
+    annotated_rgb = cv2.cvtColor(annotated_bgr, cv2.COLOR_BGR2RGB)
+    annotated_pil = Image.fromarray(annotated_rgb)
+
+    buffer = io.BytesIO()
+    annotated_pil.save(buffer, format="JPEG", quality=85)
+    buffer.seek(0)
+    base64_image = base64.b64encode(buffer.getvalue()).decode("utf-8")
+
     # Pass the labels to your services file
     final_report = calculate_fault(detected_parts)
+
+    # Add the annotated image to the response
+    final_report["base64_image"] = base64_image
 
     return jsonify(final_report)
 

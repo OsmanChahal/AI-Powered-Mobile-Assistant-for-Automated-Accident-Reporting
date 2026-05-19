@@ -12,7 +12,6 @@ class FirestoreService {
     required List<Map<String, dynamic>> carsInvolved, 
   }) async {
     try {
-
       await _db.collection('Reports').add({
         'timestamp': FieldValue.serverTimestamp(),
         'reported_by': reporterUid,

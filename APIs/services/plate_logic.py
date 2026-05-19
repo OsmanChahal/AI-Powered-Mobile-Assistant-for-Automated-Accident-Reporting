@@ -1,26 +1,41 @@
 def decode_plate(boxes, class_names):
     """
-    Takes YOLO bounding boxes, sorts them geometrically from left to right,
+    Takes YOLO bounding boxes, enforces Saudi plate format (max 3 letters, 
+    max 4 digits), selects by highest confidence, sorts left-to-right,
     and returns the final license plate string.
     """
-    characters = []
-    
+    letters = []
+    digits = []
+
     for box in boxes:
-        # Extract the X-coordinate of the left side of the bounding box
+        conf = float(box.conf[0])
         x_min = float(box.xyxy[0][0])
         class_id = int(box.cls[0])
         char = class_names[class_id]
-        
-        characters.append((x_min, char))
-    
-    # Sort the list based on the X-coordinate (Left to Right)
-    characters.sort(key=lambda item: item[0])
-    
-    # If no characters were detected, return None so Flask sends null in JSON
-    if not characters:
+
+        if char.isalpha():
+            letters.append((conf, x_min, char))
+        else:
+            digits.append((conf, x_min, char))
+
+    # Keep only the top N by confidence, then sort spatially left-to-right
+    top_letters = sorted(
+        sorted(letters, key=lambda item: item[0], reverse=True)[:3],  # top 3 conf
+        key=lambda item: item[1]  # sort by x_min
+    )
+    top_digits = sorted(
+        sorted(digits, key=lambda item: item[0], reverse=True)[:4],   # top 4 conf
+        key=lambda item: item[1]
+    )
+
+    if not top_letters and not top_digits:
         return None
 
-    # Join the characters into a single string
-    plate_string = "".join([item[1] for item in characters])
-    
-    return plate_string
+    # Saudi plates: digits on the left, letters on the right
+    plate_string = (
+        "".join(item[2] for item in top_digits) +
+        " " +
+        "".join(item[2] for item in top_letters)
+    )
+
+    return plate_string.strip()
